@@ -1,7 +1,5 @@
 
-## <img width="685" height="685" alt="image" src="https://github.com/user-attachments/assets/629672b0-074d-47fa-8e31-18b8d0803e04" />
- Información General
-- **Nombre:** Jorge Steven Gutiérrez Fierro  
+1. - ** 7w7 Nombre:** Jorge Steven Gutiérrez Fierro  
 - **Edad:** 19 años  
 - **Ciudad:** Neiva, Huila, Colombia  
 
@@ -23,4 +21,5 @@
 - Aprendizaje continuo  
 
 ---
+
 
