@@ -1,0 +1,133 @@
+-- =========================
+-- UBICACIÓN
+-- =========================
+DROP DATABASE IF EXISTS comercial22;
+CREATE DATABASE comercial22;
+USE comercial22;
+CREATE TABLE continente (
+    id_continente INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    codigo VARCHAR(10),
+    descripcion VARCHAR(255)
+) ENGINE=InnoDB;
+
+CREATE TABLE pais (
+    id_pais INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    codigo_iso VARCHAR(10),
+    continente_id INT,
+    FOREIGN KEY (continente_id) REFERENCES continente(id_continente)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE departamento (
+    id_departamento INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    pais_id INT,
+    FOREIGN KEY (pais_id) REFERENCES pais(id_pais)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE ciudad (
+    id_ciudad INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    departamento_id INT,
+    FOREIGN KEY (departamento_id) REFERENCES departamento(id_departamento)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE barrio (
+    id_barrio INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    ciudad_id INT,
+    FOREIGN KEY (ciudad_id) REFERENCES ciudad(id_ciudad)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- =========================
+-- PERSONA Y USUARIO
+-- =========================
+
+CREATE TABLE persona (
+    id_persona INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100),
+    documento VARCHAR(50) UNIQUE,
+    correo VARCHAR(100),
+    telefono VARCHAR(50),
+    barrio_id INT,
+    FOREIGN KEY (barrio_id) REFERENCES barrio(id_barrio)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE usuario (
+    id_usuario INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    estado BOOLEAN DEFAULT TRUE,
+    persona_id INT UNIQUE,
+    FOREIGN KEY (persona_id) REFERENCES persona(id_persona)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE rol (
+    id_rol INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    descripcion VARCHAR(255)
+) ENGINE=InnoDB;
+
+CREATE TABLE usuario_rol (
+    id_usuario_rol INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT,
+    rol_id INT,
+    FOREIGN KEY (usuario_id) REFERENCES usuario(id_usuario),
+    FOREIGN KEY (rol_id) REFERENCES rol(id_rol)
+) ENGINE=InnoDB;
+
+-- =========================
+-- COMERCIAL
+-- =========================
+
+CREATE TABLE categoria (
+    id_categoria INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion VARCHAR(255)
+) ENGINE=InnoDB;
+
+CREATE TABLE producto (
+    id_producto INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    precio DECIMAL(10,2) NOT NULL,
+    stock INT DEFAULT 0,
+    categoria_id INT,
+    FOREIGN KEY (categoria_id) REFERENCES categoria(id_categoria)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE cliente (
+    id_cliente INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    telefono VARCHAR(50),
+    correo VARCHAR(100)
+) ENGINE=InnoDB;
+
+CREATE TABLE factura (
+    id_factura INT AUTO_INCREMENT PRIMARY KEY,
+    fecha DATE NOT NULL,
+    total DECIMAL(10,2),
+    cliente_id INT,
+    usuario_id INT,
+    FOREIGN KEY (cliente_id) REFERENCES cliente(id_cliente),
+    FOREIGN KEY (usuario_id) REFERENCES usuario(id_usuario)
+) ENGINE=InnoDB;
+
+CREATE TABLE detalle_factura (
+    id_detalle INT AUTO_INCREMENT PRIMARY KEY,
+    factura_id INT,
+    producto_id INT,
+    cantidad INT NOT NULL,
+    precio_unitario DECIMAL(10,2),
+    subtotal DECIMAL(10,2),
+    FOREIGN KEY (factura_id) REFERENCES factura(id_factura),
+    FOREIGN KEY (producto_id) REFERENCES producto(id_producto)
+) ENGINE=InnoDB;
