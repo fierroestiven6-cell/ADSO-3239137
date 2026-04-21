@@ -1,0 +1,353 @@
+DROP DATABASE IF EXISTS carrito20;
+CREATE DATABASE carrito20;
+USE carrito20;
+
+CREATE TABLE person (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    type_document_id INT,
+    document_number VARCHAR(50),
+    first_name VARCHAR(100),
+    middle_name VARCHAR(100),
+    last_name VARCHAR(100),
+    second_last_name VARCHAR(100),
+    email VARCHAR(150),
+    phone VARCHAR(50),
+    birth_date DATE
+);
+
+CREATE TABLE role (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(20),
+    name VARCHAR(100),
+    description VARCHAR(255)
+);
+
+CREATE TABLE user_account (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    person_id INT,
+    username VARCHAR(50),
+    password_hash TEXT,
+    last_login_at TIMESTAMP
+);
+
+CREATE TABLE module (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(20),
+    name VARCHAR(100),
+    description VARCHAR(255),
+    route VARCHAR(255),
+    icon VARCHAR(100),
+    order_index INT
+);
+
+CREATE TABLE app_view (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    module_id INT,
+    code VARCHAR(20),
+    name VARCHAR(100),
+    description VARCHAR(255),
+    route VARCHAR(255),
+    order_index INT
+);
+
+CREATE TABLE user_role (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_account_id INT,
+    role_id INT,
+    start_date DATE,
+    end_date DATE
+);
+
+CREATE TABLE role_module (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    role_id INT,
+    module_id INT
+);
+
+CREATE TABLE module_view (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    module_id INT,
+    app_view_id INT
+);
+
+CREATE TABLE continent (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(10),
+    name VARCHAR(100),
+    description VARCHAR(255)
+);
+
+CREATE TABLE country (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    continent_id INT,
+    code VARCHAR(10),
+    name VARCHAR(100),
+    description VARCHAR(255),
+    iso_code VARCHAR(10),
+    phone_code VARCHAR(10)
+);
+
+CREATE TABLE department (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    country_id INT,
+    code VARCHAR(10),
+    name VARCHAR(100),
+    description VARCHAR(255)
+);
+
+CREATE TABLE city (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    department_id INT,
+    code VARCHAR(10),
+    name VARCHAR(100),
+    description VARCHAR(255),
+    postal_code VARCHAR(20)
+);
+
+CREATE TABLE address (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    city_id INT,
+    line_1 VARCHAR(255),
+    line_2 VARCHAR(255),
+    reference VARCHAR(255),
+    zip_code VARCHAR(20),
+    latitude DECIMAL(10,6),
+    longitude DECIMAL(10,6)
+);
+
+CREATE TABLE type_document (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(20),
+    name VARCHAR(100),
+    description VARCHAR(255)
+);
+
+CREATE TABLE file (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(20),
+    name VARCHAR(100),
+    description VARCHAR(255),
+    file_name VARCHAR(255),
+    file_path TEXT,
+    file_extension VARCHAR(20),
+    mime_type VARCHAR(100),
+    size INT
+);
+
+CREATE TABLE status (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(20),
+    name VARCHAR(100),
+    description VARCHAR(255),
+    domain_name VARCHAR(100)
+);
+
+CREATE TABLE payment_method (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(20),
+    name VARCHAR(100),
+    description VARCHAR(255)
+);
+
+CREATE TABLE order_status (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(20),
+    name VARCHAR(100),
+    description VARCHAR(255)
+);
+
+CREATE TABLE payment_status (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(20),
+    name VARCHAR(100),
+    description VARCHAR(255)
+);
+
+CREATE TABLE shipment_status (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(20),
+    name VARCHAR(100),
+    description VARCHAR(255)
+);
+
+CREATE TABLE cart (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT,
+    opened_at TIMESTAMP,
+    closed_at TIMESTAMP,
+    total_amount DECIMAL(10,2),
+    total_items INT
+);
+
+CREATE TABLE cart_item (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cart_id INT,
+    product_id INT,
+    quantity INT,
+    unit_price DECIMAL(10,2),
+    subtotal DECIMAL(10,2)
+);
+
+CREATE TABLE orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT,
+    order_status_id INT,
+    billing_address_id INT,
+    shipping_address_id INT,
+    order_number VARCHAR(50),
+    order_date TIMESTAMP,
+    subtotal DECIMAL(10,2),
+    tax_amount DECIMAL(10,2),
+    discount_amount DECIMAL(10,2),
+    shipping_amount DECIMAL(10,2),
+    total_amount DECIMAL(10,2),
+    note TEXT
+);
+
+CREATE TABLE order_item (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT,
+    product_id INT,
+    quantity INT,
+    unit_price DECIMAL(10,2),
+    tax_amount DECIMAL(10,2),
+    discount_amount DECIMAL(10,2),
+    subtotal DECIMAL(10,2),
+    total_amount DECIMAL(10,2)
+);
+
+CREATE TABLE invoice (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT,
+    invoice_number VARCHAR(50),
+    issue_date DATE,
+    subtotal DECIMAL(10,2),
+    tax_amount DECIMAL(10,2),
+    total_amount DECIMAL(10,2)
+);
+
+CREATE TABLE payment (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT,
+    payment_method_id INT,
+    payment_status_id INT,
+    payment_date TIMESTAMP,
+    reference_number VARCHAR(100),
+    amount DECIMAL(10,2),
+    authorization_code VARCHAR(100),
+    transaction_number VARCHAR(100)
+);
+
+CREATE TABLE shipment (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT,
+    shipment_status_id INT,
+    address_id INT,
+    shipment_date DATE,
+    delivered_date DATE,
+    tracking_number VARCHAR(100),
+    carrier_name VARCHAR(100),
+    shipping_cost DECIMAL(10,2)
+);
+
+CREATE TABLE category (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(20),
+    name VARCHAR(100),
+    description VARCHAR(255),
+    parent_category_id INT
+);
+
+CREATE TABLE product (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category_id INT,
+    brand_id INT,
+    code VARCHAR(50),
+    name VARCHAR(100),
+    description TEXT,
+    sku VARCHAR(50),
+    barcode VARCHAR(50),
+    price DECIMAL(10,2),
+    cost DECIMAL(10,2),
+    weight DECIMAL(10,2)
+);
+
+CREATE TABLE product_image (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT,
+    file_id INT,
+    url TEXT,
+    is_main BOOLEAN,
+    order_index INT
+);
+
+CREATE TABLE brand (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(20),
+    name VARCHAR(100),
+    description VARCHAR(255)
+);
+
+CREATE TABLE stock (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT,
+    quantity_available INT,
+    quantity_reserved INT,
+    reorder_level INT,
+    max_stock INT,
+    min_stock INT
+);
+
+CREATE TABLE inventory_movement (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT,
+    movement_type VARCHAR(20),
+    quantity INT,
+    unit_cost DECIMAL(10,2),
+    reference_type VARCHAR(50),
+    reference_id INT,
+    movement_date TIMESTAMP,
+    note TEXT
+);
+
+CREATE TABLE customer (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    person_id INT,
+    customer_code VARCHAR(50),
+    loyalty_points INT
+);
+
+CREATE TABLE customer_address (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT,
+    address_id INT,
+    is_default BOOLEAN,
+    address_type VARCHAR(50)
+);
+
+CREATE TABLE supplier (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    person_id INT,
+    supplier_code VARCHAR(50),
+    contact_name VARCHAR(100),
+    contact_email VARCHAR(100),
+    contact_phone VARCHAR(50)
+);
+
+CREATE TABLE supplier_address (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    supplier_id INT,
+    address_id INT,
+    is_default BOOLEAN,
+    address_type VARCHAR(50)
+);
+
+CREATE TABLE supplier_product (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    supplier_id INT,
+    product_id INT,
+    supplier_product_code VARCHAR(50),
+    purchase_price DECIMAL(10,2),
+    lead_time_days INT,
+    is_primary BOOLEAN
+);
