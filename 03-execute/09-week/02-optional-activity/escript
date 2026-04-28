@@ -1,0 +1,408 @@
+DROP DATABASE IF EXISTS Sistema_Hotelero21;
+CREATE DATABASE Sistema_Hotelero21;
+USE Sistema_Hotelero21;
+
+-- =========================
+-- 1. PARAMETRIZACIÓN
+-- =========================
+
+CREATE TABLE tipo_documento (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50)
+);
+
+CREATE TABLE persona (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tipo_documento_id INT,
+    numero_documento VARCHAR(50),
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    email VARCHAR(150),
+    phone VARCHAR(50),
+    FOREIGN KEY (tipo_documento_id) REFERENCES tipo_documento(id)
+);
+
+CREATE TABLE cliente (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    persona_id INT,
+    FOREIGN KEY (persona_id) REFERENCES persona(id)
+);
+
+CREATE TABLE empleado (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    persona_id INT,
+    cargo VARCHAR(100),
+    FOREIGN KEY (persona_id) REFERENCES persona(id)
+);
+
+CREATE TABLE precio (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    valor DECIMAL(10,2)
+);
+
+CREATE TABLE empresa (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100)
+);
+
+CREATE TABLE informacion_legal (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT,
+    nit VARCHAR(50),
+    FOREIGN KEY (empresa_id) REFERENCES empresa(id)
+);
+
+CREATE TABLE tipo_dia (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50)
+);
+
+CREATE TABLE metodo_pago (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50)
+);
+
+-- =========================
+-- 2. DISTRIBUCIÓN
+-- =========================
+
+CREATE TABLE sede (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100)
+);
+
+CREATE TABLE tipo_habitacion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50)
+);
+
+CREATE TABLE estado_habitacion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50)
+);
+
+CREATE TABLE habitacion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sede_id INT,
+    tipo_habitacion_id INT,
+    estado_habitacion_id INT,
+    numero VARCHAR(10),
+    FOREIGN KEY (sede_id) REFERENCES sede(id),
+    FOREIGN KEY (tipo_habitacion_id) REFERENCES tipo_habitacion(id),
+    FOREIGN KEY (estado_habitacion_id) REFERENCES estado_habitacion(id)
+);
+
+-- =========================
+-- 3. PRESTACIÓN DE SERVICIO
+-- =========================
+
+CREATE TABLE reserva_habitacion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cliente_id INT,
+    habitacion_id INT,
+    fecha_inicio DATE,
+    fecha_fin DATE,
+    FOREIGN KEY (cliente_id) REFERENCES cliente(id),
+    FOREIGN KEY (habitacion_id) REFERENCES habitacion(id)
+);
+
+CREATE TABLE cancelacion_habitacion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reserva_id INT,
+    motivo TEXT,
+    FOREIGN KEY (reserva_id) REFERENCES reserva_habitacion(id)
+);
+
+CREATE TABLE disponibilidad_habitacion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    habitacion_id INT,
+    fecha DATE,
+    disponible BOOLEAN,
+    FOREIGN KEY (habitacion_id) REFERENCES habitacion(id)
+);
+
+CREATE TABLE catalogo_habitacion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tipo_habitacion_id INT,
+    descripcion TEXT,
+    FOREIGN KEY (tipo_habitacion_id) REFERENCES tipo_habitacion(id)
+);
+
+CREATE TABLE huesped (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    persona_id INT,
+    FOREIGN KEY (persona_id) REFERENCES persona(id)
+);
+
+CREATE TABLE acompanante (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    huesped_id INT,
+    nombre VARCHAR(100),
+    FOREIGN KEY (huesped_id) REFERENCES huesped(id)
+);
+
+CREATE TABLE check_in (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reserva_id INT,
+    fecha DATETIME,
+    FOREIGN KEY (reserva_id) REFERENCES reserva_habitacion(id)
+);
+
+CREATE TABLE check_out (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reserva_id INT,
+    fecha DATETIME,
+    FOREIGN KEY (reserva_id) REFERENCES reserva_habitacion(id)
+);
+
+CREATE TABLE estadia (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reserva_id INT,
+    dias INT,
+    FOREIGN KEY (reserva_id) REFERENCES reserva_habitacion(id)
+);
+
+CREATE TABLE venta_producto (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    producto_id INT,
+    cantidad INT
+);
+
+CREATE TABLE venta_servicio (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    servicio_id INT,
+    cantidad INT
+);
+
+-- =========================
+-- 4. FACTURACIÓN
+-- =========================
+
+CREATE TABLE pre_factura (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cliente_id INT
+);
+
+CREATE TABLE factura (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cliente_id INT,
+    total DECIMAL(10,2),
+    FOREIGN KEY (cliente_id) REFERENCES cliente(id)
+);
+
+CREATE TABLE pago_parcial (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    factura_id INT,
+    metodo_pago_id INT,
+    valor DECIMAL(10,2),
+    FOREIGN KEY (factura_id) REFERENCES factura(id),
+    FOREIGN KEY (metodo_pago_id) REFERENCES metodo_pago(id)
+);
+
+CREATE TABLE detalle_compra (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    factura_id INT,
+    descripcion TEXT,
+    valor DECIMAL(10,2),
+    FOREIGN KEY (factura_id) REFERENCES factura(id)
+);
+
+-- =========================
+-- 5. INVENTARIO
+-- =========================
+
+CREATE TABLE producto (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100),
+    precio DECIMAL(10,2)
+);
+
+CREATE TABLE servicio (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100),
+    precio DECIMAL(10,2)
+);
+
+CREATE TABLE proveedor (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100)
+);
+
+CREATE TABLE seguimiento_producto (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    producto_id INT,
+    cantidad INT,
+    FOREIGN KEY (producto_id) REFERENCES producto(id)
+);
+
+CREATE TABLE disponibilidad_inventario (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    producto_id INT,
+    stock INT,
+    FOREIGN KEY (producto_id) REFERENCES producto(id)
+);
+
+-- =========================
+-- 6. NOTIFICACIÓN
+-- =========================
+
+CREATE TABLE promocion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE alerta (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    mensaje TEXT
+);
+
+CREATE TABLE termino_condicion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE fidelizacion_cliente (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cliente_id INT,
+    puntos INT,
+    FOREIGN KEY (cliente_id) REFERENCES cliente(id)
+);
+
+-- =========================
+-- 7. SEGURIDAD
+-- =========================
+
+CREATE TABLE usuario (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    persona_id INT,
+    username VARCHAR(50),
+    password VARCHAR(100),
+    FOREIGN KEY (persona_id) REFERENCES persona(id)
+);
+
+CREATE TABLE rol (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50)
+);
+
+CREATE TABLE permiso (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50)
+);
+
+CREATE TABLE modulo (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50)
+);
+
+CREATE TABLE vista (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50)
+);
+
+CREATE TABLE usuario_rol (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT,
+    rol_id INT,
+    FOREIGN KEY (usuario_id) REFERENCES usuario(id),
+    FOREIGN KEY (rol_id) REFERENCES rol(id)
+);
+
+CREATE TABLE rol_permiso (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    rol_id INT,
+    permiso_id INT,
+    FOREIGN KEY (rol_id) REFERENCES rol(id),
+    FOREIGN KEY (permiso_id) REFERENCES permiso(id)
+);
+
+CREATE TABLE modulo_vista (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    modulo_id INT,
+    vista_id INT,
+    FOREIGN KEY (modulo_id) REFERENCES modulo(id),
+    FOREIGN KEY (vista_id) REFERENCES vista(id)
+);
+
+-- =========================
+-- 8. MANTENIMIENTO
+-- =========================
+
+CREATE TABLE tecnico (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100)
+);
+
+CREATE TABLE mantenimiento_habitacion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    habitacion_id INT,
+    tecnico_id INT,
+    descripcion TEXT,
+    FOREIGN KEY (habitacion_id) REFERENCES habitacion(id),
+    FOREIGN KEY (tecnico_id) REFERENCES tecnico(id)
+);
+
+CREATE TABLE mantenimiento_uso (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE mantenimiento_remodelacion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE dashboard_mantenimiento (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    resumen TEXT
+);
+
+-- =========================
+-- DATOS (CASO REAL)
+-- =========================
+
+INSERT INTO tipo_documento (nombre) VALUES ('CC');
+
+INSERT INTO persona (tipo_documento_id, numero_documento, first_name, last_name, email, phone) VALUES
+(1,'123','Rosa','Martinez','rosa@gmail.com','3001111111'),
+(1,'456','Steven','Lopez','steven@gmail.com','3002222222'),
+(1,'789','Carlos','Ramirez','carlos@gmail.com','3003333333');
+
+INSERT INTO cliente (persona_id) VALUES (1),(2);
+INSERT INTO empleado (persona_id,cargo) VALUES (3,'Recepcionista');
+
+INSERT INTO metodo_pago (nombre) VALUES ('Efectivo'),('Tarjeta');
+
+INSERT INTO sede (nombre) VALUES ('Hotel Central');
+INSERT INTO tipo_habitacion (nombre) VALUES ('Simple'),('Doble');
+INSERT INTO estado_habitacion (nombre) VALUES ('Disponible');
+
+INSERT INTO habitacion (sede_id,tipo_habitacion_id,estado_habitacion_id,numero)
+VALUES (1,1,1,'101');
+
+INSERT INTO reserva_habitacion (cliente_id,habitacion_id,fecha_inicio,fecha_fin)
+VALUES (1,1,'2026-04-28','2026-04-30');
+
+INSERT INTO huesped (persona_id) VALUES (1);
+
+INSERT INTO acompanante (huesped_id,nombre)
+VALUES (1,'Luis Martinez'),(1,'Ana Martinez');
+
+INSERT INTO check_in (reserva_id,fecha) VALUES (1,NOW());
+INSERT INTO check_out (reserva_id,fecha) VALUES (1,NOW());
+
+INSERT INTO factura (cliente_id,total) VALUES (1,200000);
+
+INSERT INTO pago_parcial (factura_id,metodo_pago_id,valor)
+VALUES (1,1,100000),(1,2,100000);
+
+INSERT INTO producto (nombre,precio)
+VALUES ('Agua',5000),('Cerveza',8000);
+
+INSERT INTO venta_producto (producto_id,cantidad)
+VALUES (1,2),(2,1);
+
+INSERT INTO tecnico (nombre) VALUES ('Pedro Gomez');
+
+INSERT INTO mantenimiento_habitacion (habitacion_id,tecnico_id,descripcion)
+VALUES (1,1,'Aire acondicionado dañado');
