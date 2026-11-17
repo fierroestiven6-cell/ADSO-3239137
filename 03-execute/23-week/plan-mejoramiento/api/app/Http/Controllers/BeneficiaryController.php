@@ -97,20 +97,13 @@ class BeneficiaryController extends Controller
     }
 
     /**
-     * Delete a beneficiary without loan history.
+     * Prevent deleting beneficiaries.
      */
     public function destroy(Beneficiary $beneficiary): JsonResponse
     {
-        if ($beneficiary->loans()->exists()) {
-            return response()->json([
-                'message' => 'Beneficiaries with loan history cannot be deleted.',
-            ], 409);
-        }
-
-        $beneficiary->delete();
-
-        return response()->json([
-            'message' => 'Beneficiary deleted successfully.',
-        ]);
+      
+    return response()->json([
+            'message' => 'Beneficiaries cannot be deleted.',
+        ], 409);
     }
 }

@@ -5,6 +5,7 @@ namespace tests\Feature\Beneficiaries;
 use App\Models\Beneficiary;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use LogicException;
 use Tests\TestCase;
 
 class BeneficiaryTest extends TestCase
@@ -131,21 +132,28 @@ class BeneficiaryTest extends TestCase
     }
 
     /**
-     * Verify that a beneficiary without loan history can be deleted.
+     * Verify that a beneficiary without loan history cannot be deleted.
      */
-    public function test_a_beneficiary_without_loans_can_be_deleted(): void
+    public function test_a_beneficiary_without_loans_cannot_be_deleted(): void
     {
         $beneficiary = Beneficiary::create([
             'full_name' => 'Ana Torres',
             'identification_number' => '789123456',
         ]);
 
-        $beneficiaryId = $beneficiary->id;
+        try {
+            $beneficiary->delete();
 
-        $beneficiary->delete();
+            $this->fail('The application allowed a beneficiary to be deleted.');
+        } catch (LogicException $exception) {
+            $this->assertSame(
+                'Beneficiaries cannot be deleted.',
+                $exception->getMessage()
+            );
+        }
 
-        $this->assertDatabaseMissing('beneficiaries', [
-            'id' => $beneficiaryId,
+        $this->assertDatabaseHas('beneficiaries', [
+            'id' => $beneficiary->id,
         ]);
     }
 
@@ -171,7 +179,7 @@ class BeneficiaryTest extends TestCase
     }
 
     /**
-     * Verify that deleting one beneficiary does not delete another.
+     * Verify that deleting one beneficiary does not affect other beneficiaries.
      */
     public function test_deleting_a_beneficiary_does_not_affect_other_beneficiaries(): void
     {
@@ -185,10 +193,20 @@ class BeneficiaryTest extends TestCase
             'identification_number' => '444555666',
         ]);
 
-        $firstBeneficiary->delete();
+        try {
+            $firstBeneficiary->delete();
 
-        $this->assertDatabaseMissing('beneficiaries', [
+            $this->fail('The application allowed a beneficiary to be deleted.');
+        } catch (LogicException $exception) {
+            $this->assertSame(
+                'Beneficiaries cannot be deleted.',
+                $exception->getMessage()
+            );
+        }
+
+        $this->assertDatabaseHas('beneficiaries', [
             'id' => $firstBeneficiary->id,
+            'full_name' => 'Andres Ruiz',
         ]);
 
         $this->assertDatabaseHas('beneficiaries', [
@@ -196,6 +214,6 @@ class BeneficiaryTest extends TestCase
             'full_name' => 'Sofia Castro',
         ]);
 
-        $this->assertDatabaseCount('beneficiaries', 1);
+        $this->assertDatabaseCount('beneficiaries', 2);
     }
 }

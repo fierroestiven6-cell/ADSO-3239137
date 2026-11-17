@@ -15,10 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class LoanController extends Controller
 {
-    /**
-     * List loans with filters and pagination.
-     */
-    public function index(Request $request): JsonResponse
+  
+public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'from' => ['nullable', 'date'],
@@ -84,11 +82,13 @@ class LoanController extends Controller
         ]);
     }
 
-    /**
-     * Register a new loan.
-     */
+   
     public function store(Request $request): JsonResponse
     {
+        if ($request->user()->role !== 'manager') {
+            abort(403, 'Solo los gestores pueden registrar préstamos.');
+        }
+
         $validated = $request->validate([
             'beneficiary_id' => [
                 'required',
@@ -199,9 +199,7 @@ class LoanController extends Controller
         );
     }
 
-    /**
-     * Retrieve loan details.
-     */
+    
     public function show(int $id): JsonResponse
     {
         $loan = Loan::query()
@@ -213,11 +211,12 @@ class LoanController extends Controller
         );
     }
 
-    /**
-     * Register the return of one loan line.
-     */
-    public function returnLine(int $loanId, int $itemId): JsonResponse
+    public function returnLine(Request $request, int $loanId, int $itemId): JsonResponse
     {
+        if ($request->user()->role !== 'manager') {
+            abort(403, 'Solo los gestores pueden registrar devoluciones.');
+        }
+
         $loan = DB::transaction(function () use ($loanId, $itemId) {
             $loan = Loan::query()
                 ->lockForUpdate()
@@ -261,9 +260,7 @@ class LoanController extends Controller
         ]);
     }
 
-    /**
-     * List outstanding overdue loan lines.
-     */
+    
     public function overdue(): JsonResponse
     {
         $now = Carbon::now('UTC');
@@ -293,9 +290,7 @@ class LoanController extends Controller
         ]);
     }
 
-    /**
-     * Calculate and format the loan status.
-     */
+
     private function formatLoan(Loan $loan, Carbon $now): array
     {
         $lines = $loan->loanLines;

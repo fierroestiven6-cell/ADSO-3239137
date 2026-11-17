@@ -161,9 +161,9 @@ class BeneficiaryApiTest extends TestCase
     }
 
     /**
-     * Verify that beneficiaries without loan history can be deleted.
+     * Verify that beneficiaries without loan history cannot be deleted.
      */
-    public function test_authenticated_users_can_delete_beneficiaries_without_loans(): void
+    public function test_authenticated_users_cannot_delete_beneficiaries_without_loans(): void
     {
         $user = User::factory()->create();
 
@@ -174,14 +174,15 @@ class BeneficiaryApiTest extends TestCase
 
         $this->actingAs($user)
             ->deleteJson("/api/beneficiaries/{$beneficiary->id}")
-            ->assertOk()
+            ->assertStatus(409)
             ->assertJsonPath(
                 'message',
-                'Beneficiary deleted successfully.'
+                'Beneficiaries cannot be deleted.'
             );
 
-        $this->assertDatabaseMissing('beneficiaries', [
+        $this->assertDatabaseHas('beneficiaries', [
             'id' => $beneficiary->id,
+            'full_name' => 'Laura Diaz',
         ]);
     }
 
@@ -208,11 +209,12 @@ class BeneficiaryApiTest extends TestCase
             ->assertStatus(409)
             ->assertJsonPath(
                 'message',
-                'Beneficiaries with loan history cannot be deleted.'
+                'Beneficiaries cannot be deleted.'
             );
 
         $this->assertDatabaseHas('beneficiaries', [
             'id' => $beneficiary->id,
+            'full_name' => 'Pedro Gomez',
         ]);
     }
 

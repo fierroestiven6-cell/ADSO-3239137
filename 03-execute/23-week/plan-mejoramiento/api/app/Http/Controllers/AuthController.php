@@ -11,31 +11,55 @@ use Illuminate\Validation\Rules\Password;
 class AuthController extends Controller
 {
     /**
-     * Register a new user.
+     * Create a manager account.
      */
-    public function register(Request $request): JsonResponse
+    public function createManager(Request $request): JsonResponse
     {
+        if ($request->user()->role !== 'admin') {
+            return response()->json([
+                'message' => 'No tienes permisos para crear gestores.',
+            ], 403);
+        }
+
+        if (is_string($request->input('username'))) {
+            $request->merge([
+                'username' => strtolower(trim($request->input('username'))),
+            ]);
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'max:50', 'unique:users,username'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(8)],
+            'username' => [
+                'required',
+                'string',
+                'max:50',
+                'unique:users,username',
+            ],
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                'unique:users,email',
+            ],
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8),
+            ],
+            'role' => ['sometimes', 'in:manager'],
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'username' => $validated['username'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'password' => $validated['password'],
             'role' => 'manager',
         ]);
 
-        $token = $user->createToken('mobility-aids-token')->plainTextToken;
-
         return response()->json([
-            'message' => 'User registered successfully.',
+            'message' => 'Gestor creado correctamente.',
             'user' => $user,
-            'token' => $token,
         ], 201);
     }
 
