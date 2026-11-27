@@ -34,9 +34,11 @@ class TechnicalAidApiTest extends TestCase
     ): TechnicalAid {
         return TechnicalAid::create([
             'category_id' => $this->createCategory()->id,
+            'name' => 'Test Technical Aid',
             'reference' => 'TA-' . fake()->unique()->numerify('#####'),
             'total_units' => $totalUnits,
             'available_units' => $availableUnits,
+            'maintenance_units' => 0,
             'is_active' => $isActive,
         ]);
     }
@@ -96,6 +98,7 @@ class TechnicalAidApiTest extends TestCase
                         'reference',
                         'total_units',
                         'available_units',
+                        'maintenance_units',
                         'is_active',
                         'category',
                     ],
@@ -115,9 +118,11 @@ class TechnicalAidApiTest extends TestCase
 
         $aid = TechnicalAid::create([
             'category_id' => $this->createCategory()->id,
+            'name' => 'Test Technical Aid',
             'reference' => 'WHEELCHAIR-001',
             'total_units' => 5,
             'available_units' => 5,
+            'maintenance_units' => 0,
             'is_active' => true,
         ]);
 
@@ -155,18 +160,21 @@ class TechnicalAidApiTest extends TestCase
         $this->actingAs($admin)
             ->postJson('/api/technical-aids', [
                 'category_id' => $category->id,
+                'name' => 'Silla de ruedas',
                 'reference' => 'TA-10001',
                 'total_units' => 10,
             ])
             ->assertCreated()
             ->assertJsonPath('technical_aid.reference', 'TA-10001')
             ->assertJsonPath('technical_aid.total_units', 10)
-            ->assertJsonPath('technical_aid.available_units', 10);
+            ->assertJsonPath('technical_aid.available_units', 10)
+            ->assertJsonPath('technical_aid.maintenance_units', 0);
 
         $this->assertDatabaseHas('technical_aids', [
             'reference' => 'TA-10001',
             'total_units' => 10,
             'available_units' => 10,
+            'maintenance_units' => 0,
             'is_active' => true,
         ]);
     }
@@ -181,6 +189,7 @@ class TechnicalAidApiTest extends TestCase
         $this->actingAs($manager)
             ->postJson('/api/technical-aids', [
                 'category_id' => $this->createCategory()->id,
+                'name' => 'Silla de ruedas',
                 'reference' => 'TA-10002',
                 'total_units' => 5,
             ])
@@ -200,6 +209,7 @@ class TechnicalAidApiTest extends TestCase
         $this->actingAs($admin)
             ->postJson('/api/technical-aids', [
                 'category_id' => $aid->category_id,
+                'name' => 'Silla de ruedas duplicada',
                 'reference' => $aid->reference,
                 'total_units' => 5,
             ])
@@ -218,14 +228,18 @@ class TechnicalAidApiTest extends TestCase
         $this->actingAs($admin)
             ->postJson('/api/technical-aids', [
                 'category_id' => '',
+                'name' => '',
                 'reference' => '',
                 'total_units' => 0,
+                'maintenance_units' => -1,
             ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors([
                 'category_id',
+                'name',
                 'reference',
                 'total_units',
+                'maintenance_units',
             ]);
 
         $this->assertDatabaseCount('technical_aids', 0);
@@ -237,6 +251,7 @@ class TechnicalAidApiTest extends TestCase
     public function test_administrators_can_update_technical_aid_inventory(): void
     {
         $admin = $this->createAdmin();
+
         $aid = $this->createTechnicalAid(
             totalUnits: 5,
             availableUnits: 3
@@ -248,12 +263,14 @@ class TechnicalAidApiTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonPath('technical_aid.total_units', 6)
-            ->assertJsonPath('technical_aid.available_units', 4);
+            ->assertJsonPath('technical_aid.available_units', 4)
+            ->assertJsonPath('technical_aid.maintenance_units', 0);
 
         $this->assertDatabaseHas('technical_aids', [
             'id' => $aid->id,
             'total_units' => 6,
             'available_units' => 4,
+            'maintenance_units' => 0,
         ]);
     }
 
@@ -263,6 +280,7 @@ class TechnicalAidApiTest extends TestCase
     public function test_inventory_cannot_be_reduced_below_borrowed_units(): void
     {
         $admin = $this->createAdmin();
+
         $aid = $this->createTechnicalAid(
             totalUnits: 5,
             availableUnits: 2

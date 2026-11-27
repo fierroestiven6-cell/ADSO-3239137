@@ -1,0 +1,14 @@
+﻿app\Http\Controllers\AuthController.php
+app\Http\Controllers\BeneficiaryController.php
+app\Http\Controllers\Controller.php
+app\Http\Controllers\LoanController.php
+app\Http\Controllers\TechnicalAidController.php
+app\Http\Middleware\CheckRole.php
+app\Models\Beneficiary.php
+app\Models\Concerns\UsesUuidV4.php
+app\Models\Loan.php
+app\Models\LoanLine.php
+app\Models\TechnicalAid.php
+app\Models\TechnicalAidCategory.php
+app\Models\User.php
+app\Providers\AppServiceProvider.php

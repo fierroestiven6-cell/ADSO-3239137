@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesUuidV4;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LoanLine extends Model
 {
+    use UsesUuidV4;
+
     protected $fillable = [
         'loan_id',
         'technical_aid_id',
@@ -14,6 +17,7 @@ class LoanLine extends Model
         'category_snapshot',
         'due_at',
         'returned_at',
+        'return_condition',
     ];
 
     protected function casts(): array

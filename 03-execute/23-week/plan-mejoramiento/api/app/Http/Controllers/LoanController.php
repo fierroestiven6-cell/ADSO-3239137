@@ -15,14 +15,20 @@ use Illuminate\Validation\ValidationException;
 
 class LoanController extends Controller
 {
-
-public function index(Request $request): JsonResponse
+    /**
+     * Display loans with filters and pagination.
+     */
+    public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date', 'after_or_equal:from'],
             'status' => ['nullable', 'in:open,overdue,closed'],
-            'beneficiary_id' => ['nullable', 'integer', 'exists:beneficiaries,id'],
+            'beneficiary_id' => [
+                'nullable',
+                'uuid',
+                'exists:beneficiaries,id',
+            ],
             'page' => ['nullable', 'integer', 'min:1'],
             'size' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
@@ -82,23 +88,25 @@ public function index(Request $request): JsonResponse
         ]);
     }
 
-
+    /**
+     * Register a new loan.
+     */
     public function store(Request $request): JsonResponse
     {
-        if ($request->user()->role !== 'manager') {
-            abort(403, 'Solo los gestores pueden registrar préstamos.');
+        if (! in_array($request->user()->role, ['admin', 'manager'], true)) {
+            abort(403, 'No tienes permisos para registrar préstamos.');
         }
 
         $validated = $request->validate([
             'beneficiary_id' => [
                 'required',
-                'integer',
+                'uuid',
                 'exists:beneficiaries,id',
             ],
             'items' => ['required', 'array', 'min:1'],
             'items.*.technical_aid_id' => [
                 'required',
-                'integer',
+                'uuid',
                 'distinct',
                 'exists:technical_aids,id',
             ],
@@ -199,8 +207,10 @@ public function index(Request $request): JsonResponse
         );
     }
 
-
-    public function show(int $id): JsonResponse
+    /**
+     * Display a specific loan.
+     */
+    public function show(string $id): JsonResponse
     {
         $loan = Loan::query()
             ->with(['beneficiary', 'loanLines'])
@@ -211,13 +221,39 @@ public function index(Request $request): JsonResponse
         );
     }
 
-    public function returnLine(Request $request, int $loanId, int $itemId): JsonResponse
-    {
-        if ($request->user()->role !== 'manager') {
-            abort(403, 'Solo los gestores pueden registrar devoluciones.');
+    /**
+     * Register a loan item return.
+     *
+     * condition:
+     * - available: return the unit to available inventory.
+     * - maintenance: send the unit to maintenance.
+     *
+     * If condition is omitted, available is used by default.
+     */
+    public function returnLine(
+        Request $request,
+        string $loanId,
+        string $itemId
+    ): JsonResponse {
+        if (! in_array($request->user()->role, ['admin', 'manager'], true)) {
+            abort(403, 'No tienes permisos para registrar devoluciones.');
         }
 
-        $loan = DB::transaction(function () use ($loanId, $itemId) {
+        $validated = $request->validate([
+            'condition' => [
+                'sometimes',
+                'required',
+                'in:available,maintenance',
+            ],
+        ]);
+
+        $condition = $validated['condition'] ?? 'available';
+
+        $loan = DB::transaction(function () use (
+            $loanId,
+            $itemId,
+            $condition
+        ) {
             $loan = Loan::query()
                 ->lockForUpdate()
                 ->findOrFail($loanId);
@@ -236,7 +272,10 @@ public function index(Request $request): JsonResponse
                 ->lockForUpdate()
                 ->findOrFail($loanLine->technical_aid_id);
 
-            if ($technicalAid->available_units >= $technicalAid->total_units) {
+            $inventoryUnits = $technicalAid->available_units
+                + $technicalAid->maintenance_units;
+
+            if ($inventoryUnits >= $technicalAid->total_units) {
                 abort(409, 'No se puede devolver la unidad porque el inventario alcanzaría un valor inválido.');
             }
 
@@ -244,15 +283,22 @@ public function index(Request $request): JsonResponse
 
             $loanLine->update([
                 'returned_at' => $now,
+                'return_condition' => $condition,
             ]);
 
-            $technicalAid->increment('available_units');
+            if ($condition === 'maintenance') {
+                $technicalAid->increment('maintenance_units');
+            } else {
+                $technicalAid->increment('available_units');
+            }
 
             return $loan;
         }, 3);
 
         return response()->json([
-            'message' => 'La devolución se registró correctamente.',
+            'message' => $condition === 'maintenance'
+                ? 'La devolución se registró y la unidad pasó a mantenimiento.'
+                : 'La devolución se registró correctamente.',
             'loan' => $this->formatLoan(
                 $loan->load(['beneficiary', 'loanLines']),
                 Carbon::now('UTC')
@@ -260,7 +306,46 @@ public function index(Request $request): JsonResponse
         ]);
     }
 
+    /**
+     * Mark a technical aid unit as repaired and available.
+     * Only administrators can complete maintenance.
+     */
+    public function completeMaintenance(
+        Request $request,
+        string $technicalAidId
+    ): JsonResponse {
+        if ($request->user()->role !== 'admin') {
+            abort(403, 'No tienes permisos para finalizar mantenimientos.');
+        }
 
+        $technicalAid = DB::transaction(function () use ($technicalAidId) {
+            $aid = TechnicalAid::query()
+                ->lockForUpdate()
+                ->findOrFail($technicalAidId);
+
+            if ($aid->maintenance_units < 1) {
+                throw ValidationException::withMessages([
+                    'maintenance_units' => [
+                        'No hay unidades pendientes de mantenimiento para esta ayuda técnica.',
+                    ],
+                ]);
+            }
+
+            $aid->decrement('maintenance_units');
+            $aid->increment('available_units');
+
+            return $aid->fresh()->load('category');
+        }, 3);
+
+        return response()->json([
+            'message' => 'El mantenimiento finalizó. La unidad está disponible nuevamente.',
+            'technical_aid' => $technicalAid,
+        ]);
+    }
+
+    /**
+     * Display overdue loan items.
+     */
     public function overdue(): JsonResponse
     {
         $now = Carbon::now('UTC');
@@ -290,7 +375,9 @@ public function index(Request $request): JsonResponse
         ]);
     }
 
-
+    /**
+     * Format a loan response.
+     */
     private function formatLoan(Loan $loan, Carbon $now): array
     {
         $lines = $loan->loanLines;
@@ -323,6 +410,7 @@ public function index(Request $request): JsonResponse
                     'category_name' => $line->category_snapshot,
                     'due_at' => $line->due_at->toISOString(),
                     'returned_at' => $line->returned_at?->toISOString(),
+                    'return_condition' => $line->return_condition,
                 ];
             })->values(),
         ];

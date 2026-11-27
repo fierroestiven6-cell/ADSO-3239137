@@ -1,10 +1,11 @@
 # Project Specification — Mobility Aids
 
-**Project identifier:** `mobility-aids`  
-**Project type:** Technical aids lending management system  
+**Project Identifier:** `mobility-aids` | **Project Type:** Technical Aids Lending Management System
+**Version:** 1.1 | **Reviewed:** 2026-11-26
 **Reference:** Manager Library specification, adapted to the assigned Mobility Aids domain.
 
---------------------------------------------------------------------------------
+---
+
 ## 1. Purpose
 
 Mobility Aids is a system designed to manage a technical aids bank. It allows administrators and managers to maintain a catalog of technical aids, register beneficiaries, manage loans and returns, monitor overdue loans, and generate reports of the most requested technical aids.
@@ -14,7 +15,9 @@ The system must preserve inventory consistency, maintain the history of operatio
 The project follows the principles established in `constitution.md`.
 
 The data model is defined exclusively in `data-model.md`, and the HTTP interface is defined exclusively in `api-contract.md`.
---------------------------------------------------------------------------------
+
+---
+
 ## 2. Actors
 
 | Actor | Responsibilities | Authentication |
@@ -26,10 +29,12 @@ The data model is defined exclusively in `data-model.md`, and the HTTP interface
 The `admin` role is provisioned during deployment through environment variables. It cannot be assigned through the application API.
 
 Beneficiaries are records in the system, not authenticated users.
---------------------------------------------------------------------------------
+
+---
+
 ## 3. Scope
 
-### 3.1 Included functionality
+### 3.1 Included Functionality
 
 The system includes:
 
@@ -51,12 +56,18 @@ The system includes:
 - Loan history and status consultation.
 - Reports of the most requested technical aids.
 
-### 3.2 Excluded functionality
+The project deliverables also include a separate static public website in `page/`. This presentation site is not an authenticated administrative module and is not part of the API or data model.
+
+The public website presents the service purpose, official categories, benefits, process, promotional video, and footer information. It must remain independent of Laravel, React, and the database. Its implementation and verification status are summarized in `architecture.md` and `evidencias/estado-verificacion-2026-11-26.md`.
+
+### 3.2 Excluded Functionality
 
 The implementation must not introduce functionality outside the approved specification.
 
 Any additional feature requires an explicit change to the specification before implementation.
---------------------------------------------------------------------------------
+
+---
+
 ## 4. User Stories and Acceptance Criteria
 
 ### HU-01 — User Authentication
@@ -93,7 +104,7 @@ As an administrator, I want to manage technical aids so that the catalog and inv
 
 ### HU-04 — Search Technical Aids
 
-As a system user, I want to search for technical aids so that I can identify available resources.
+As an authenticated system user (`admin` or `manager`), I want to search for technical aids so that I can identify available resources.
 
 **Acceptance Criteria**
 
@@ -117,7 +128,7 @@ As a manager, I want to register a technical aids loan so that the delivery of r
 
 **Acceptance Criteria**
 
-- **CA-06.1:** A loan belongs to exactly one beneficiary, is registered by the authenticated user, and contains one or more loan lines. A beneficiary cannot exceed the maximum of two outstanding technical aids.
+- **CA-06.1:** A loan belongs to exactly one beneficiary, is registered by the authenticated manager, and contains one or more loan lines. A beneficiary cannot exceed the maximum of two outstanding technical aids.
 - **CA-06.2:** The same technical aid cannot appear more than once in the same loan. Invalid requests return HTTP 422.
 - **CA-06.3:** Each loan line decreases available inventory by one unit in the same transaction. If no units are available, the operation returns HTTP 409 and no partial loan is registered.
 - **CA-06.4:** A beneficiary cannot have more than two technical aids without returning them. Violations return HTTP 422 with the current outstanding count.
@@ -166,7 +177,9 @@ As an administrator, I want to generate reports of the most requested technical 
 - **CA-10.3:** The report is not grouped by manager or beneficiary.
 - **CA-10.4:** Historical reports must not change when a technical aid or its category is subsequently modified.
 - **CA-10.5:** Only administrators can access this report.
---------------------------------------------------------------------------------
+
+---
+
 ## 5. Business Rules
 
 | ID | Business Rule |
@@ -177,7 +190,9 @@ As an administrator, I want to generate reports of the most requested technical 
 | BR-04 | Information frozen in a loan line must not change when the technical aids catalog is updated. |
 | BR-05 | Loans and returns cannot be deleted. Technical aids can only be removed through logical deletion. |
 | BR-06 | All dates are stored and processed in UTC. User-facing messages must be in Spanish, while code identifiers and database columns must be in English. |
---------------------------------------------------------------------------------
+
+---
+
 ## 6. Non-Functional Requirements
 
 | ID | Requirement | Verification |
@@ -187,7 +202,9 @@ As an administrator, I want to generate reports of the most requested technical 
 | NFR-03 | Passwords must never be transmitted or stored in plain text and must never appear in application logs. | Security and log inspection. |
 | NFR-04 | All HTTP errors must follow the same standardized response structure defined in `api-contract.md`. | Automated API contract tests. |
 | NFR-05 | The complete environment must start with a single command, and the database must initially be empty. | Infrastructure startup verification. |
---------------------------------------------------------------------------------
+
+---
+
 ## 7. Authorization Requirements
 
 The system must enforce role-based access control.
@@ -197,7 +214,9 @@ The system must enforce role-based access control.
 - `beneficiary`: does not authenticate or access the application.
 
 Unauthorized requests must return HTTP 401 or HTTP 403 according to the authentication and authorization rules.
---------------------------------------------------------------------------------
+
+---
+
 ## 8. Inventory and Concurrency Integrity
 
 Inventory operations must be transactional.
@@ -211,14 +230,18 @@ When two managers attempt to register a loan for the last available unit simulta
 5. No incomplete loan must remain registered.
 
 Returns must also be transactional to prevent duplicate inventory increases.
---------------------------------------------------------------------------------
+
+---
+
 ## 9. Localization and Date Handling
 
 - All code identifiers, variable names, class names, database columns, and API identifiers must use English.
 - All messages displayed to users must be written in Spanish.
 - All dates and timestamps must use UTC.
 - The system must calculate overdue periods consistently using UTC.
---------------------------------------------------------------------------------
+
+---
+
 ## 10. Scope Compliance
 
 The implementation must correspond exactly to the ten user stories, six business rules, and five non-functional requirements defined in this document.
@@ -229,5 +252,17 @@ The implementation tasks and their verification evidence must be documented in `
 
 No functionality outside this specification may be introduced without an approved specification change.
 
---------------------------------------------------------------------------------
+## 11. Implementation and Verification Snapshot
+
+This specification defines required behavior; it is not itself proof of implementation or acceptance. As reviewed on 2026-11-26:
+
+- The five category names are present in the backend category seeder and the static public website.
+- The static public website exists in `page/` and its source contains HTML, CSS, and JavaScript with no application/API client integration.
+- The Laravel route inventory and configured public API base currently differ from portions of the target contract in `api-contract.md`. The route differences and their verification limits are recorded there.
+- An administrator login screen was visually verified on a laptop at the reported local development URL. Successful authentication, end-to-end API integration, mobile administrator access, and full acceptance testing have not been established.
+- Responsive source inspection, browser viewport checks, and user-reported physical-device access are distinguished in the evidence record. No claim is made that every viewport has a saved automated screenshot.
+- The final local verification passed 90 tests and 365 assertions using an isolated SQLite in-memory test database. The repository has 11 PHP test files, below the 15-file target; this test result does not establish full API-contract acceptance. See `evidencias/estado-verificacion-2026-11-26.md`.
+
+---
+
 **End of Project Specification — Mobility Aids**

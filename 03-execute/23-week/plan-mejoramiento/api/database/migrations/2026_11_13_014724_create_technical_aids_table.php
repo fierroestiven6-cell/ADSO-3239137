@@ -10,9 +10,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('technical_aids', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
 
-            $table->foreignId('category_id')
+            $table->foreignUuid('category_id')
                 ->constrained('technical_aid_categories');
 
             $table->string('reference')->unique();

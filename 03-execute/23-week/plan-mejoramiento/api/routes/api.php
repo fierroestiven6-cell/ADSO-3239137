@@ -3,6 +3,8 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BeneficiaryController;
 use App\Http\Controllers\LoanController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\TechnicalAidCategoryController;
 use App\Http\Controllers\TechnicalAidController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +20,18 @@ Route::post('/register', [AuthController::class, 'register'])
 
 Route::post('/login', [AuthController::class, 'login'])
     ->name('login');
+
+/*
+|--------------------------------------------------------------------------
+| Password Recovery Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::post('/password/forgot', [AuthController::class, 'forgotPassword'])
+    ->name('password.forgot');
+
+Route::post('/password/reset', [AuthController::class, 'resetPassword'])
+    ->name('password.reset');
 
 /*
 |--------------------------------------------------------------------------
@@ -50,6 +64,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Technical Aid Categories
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/technical-aid-categories', [TechnicalAidCategoryController::class, 'index'])
+        ->name('technical-aid-categories.index');
+
+    /*
+    |--------------------------------------------------------------------------
     | Technical Aids Management
     |--------------------------------------------------------------------------
     */
@@ -73,5 +96,25 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/loans/{loanId}/items/{itemId}/return', [LoanController::class, 'returnLine'])
         ->name('loans.items.return');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Technical Aid Maintenance
+    |--------------------------------------------------------------------------
+    */
+
+    Route::post(
+        '/technical-aids/{technicalAidId}/maintenance/complete',
+        [LoanController::class, 'completeMaintenance']
+    )->name('technical-aids.maintenance.complete');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Reports Management
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/reports/summary', [ReportController::class, 'summary'])
+        ->name('reports.summary');
 
 });

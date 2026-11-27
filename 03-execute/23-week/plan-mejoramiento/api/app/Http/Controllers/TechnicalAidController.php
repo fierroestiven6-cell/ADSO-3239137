@@ -6,6 +6,7 @@ use App\Models\TechnicalAid;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class TechnicalAidController extends Controller
@@ -19,7 +20,7 @@ class TechnicalAidController extends Controller
             'q' => ['nullable', 'string', 'max:255'],
             'category_id' => [
                 'nullable',
-                'integer',
+                'uuid',
                 'exists:technical_aid_categories,id',
             ],
             'page' => ['sometimes', 'integer', 'min:1'],
@@ -33,15 +34,17 @@ class TechnicalAidController extends Controller
             ->with('category')
             ->where('is_active', true);
 
-        if (! empty($validated['q'])) {
-            $query->where(
-                'reference',
-                'like',
-                '%' . $validated['q'] . '%'
-            );
+        if (!empty($validated['q'])) {
+            $search = $validated['q'];
+
+            $query->where(function ($builder) use ($search) {
+                $builder->where('reference', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
         }
 
-        if (! empty($validated['category_id'])) {
+        if (!empty($validated['category_id'])) {
             $query->where('category_id', $validated['category_id']);
         }
 
@@ -62,7 +65,7 @@ class TechnicalAidController extends Controller
      */
     public function show(TechnicalAid $technicalAid): JsonResponse
     {
-        if (! $technicalAid->is_active) {
+        if (!$technicalAid->is_active) {
             return response()->json([
                 'message' => 'La ayuda técnica no existe o está inactiva.',
             ], 404);
@@ -87,20 +90,50 @@ class TechnicalAidController extends Controller
         $validated = $request->validate([
             'category_id' => [
                 'required',
-                'integer',
+                'uuid',
                 'exists:technical_aid_categories,id',
+            ],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
             ],
             'reference' => [
                 'required',
                 'string',
                 'max:255',
             ],
+            'description' => [
+                'nullable',
+                'string',
+                'max:5000',
+            ],
+            'image' => [
+                'nullable',
+                'image',
+                'max:5120',
+            ],
             'total_units' => [
                 'required',
                 'integer',
                 'min:1',
             ],
+            'maintenance_units' => [
+                'sometimes',
+                'integer',
+                'min:0',
+            ],
         ]);
+
+        $maintenanceUnits = $validated['maintenance_units'] ?? 0;
+
+        if ($maintenanceUnits > $validated['total_units']) {
+            throw ValidationException::withMessages([
+                'maintenance_units' => [
+                    'Las unidades en mantenimiento no pueden superar el total de unidades.',
+                ],
+            ]);
+        }
 
         $referenceExists = TechnicalAid::query()
             ->where('reference', $validated['reference'])
@@ -113,13 +146,32 @@ class TechnicalAidController extends Controller
             ], 409);
         }
 
-        $technicalAid = TechnicalAid::create([
-            'category_id' => $validated['category_id'],
-            'reference' => $validated['reference'],
-            'total_units' => $validated['total_units'],
-            'available_units' => $validated['total_units'],
-            'is_active' => true,
-        ]);
+        $imagePath = null;
+
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')
+                ->store('technical-aids', 'public');
+        }
+
+        try {
+            $technicalAid = TechnicalAid::create([
+                'category_id' => $validated['category_id'],
+                'name' => $validated['name'],
+                'reference' => $validated['reference'],
+                'description' => $validated['description'] ?? null,
+                'image_path' => $imagePath,
+                'total_units' => $validated['total_units'],
+                'maintenance_units' => $maintenanceUnits,
+                'available_units' => $validated['total_units'] - $maintenanceUnits,
+                'is_active' => true,
+            ]);
+        } catch (\Throwable $exception) {
+            if ($imagePath !== null) {
+                Storage::disk('public')->delete($imagePath);
+            }
+
+            throw $exception;
+        }
 
         return response()->json([
             'message' => 'Ayuda técnica registrada correctamente.',
@@ -140,7 +192,7 @@ class TechnicalAidController extends Controller
             ], 403);
         }
 
-        if (! $technicalAid->is_active) {
+        if (!$technicalAid->is_active) {
             return response()->json([
                 'message' => 'No se puede actualizar una ayuda técnica inactiva.',
             ], 404);
@@ -150,8 +202,14 @@ class TechnicalAidController extends Controller
             'category_id' => [
                 'sometimes',
                 'required',
-                'integer',
+                'uuid',
                 'exists:technical_aid_categories,id',
+            ],
+            'name' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
             ],
             'reference' => [
                 'sometimes',
@@ -159,11 +217,29 @@ class TechnicalAidController extends Controller
                 'string',
                 'max:255',
             ],
+            'description' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:5000',
+            ],
+            'image' => [
+                'sometimes',
+                'nullable',
+                'image',
+                'max:5120',
+            ],
             'total_units' => [
                 'sometimes',
                 'required',
                 'integer',
                 'min:1',
+            ],
+            'maintenance_units' => [
+                'sometimes',
+                'required',
+                'integer',
+                'min:0',
             ],
         ]);
 
@@ -187,43 +263,78 @@ class TechnicalAidController extends Controller
             }
         }
 
-        $updatedAid = DB::transaction(function () use (
-            $validated,
-            $technicalAid
-        ) {
-            $aid = TechnicalAid::query()
-                ->lockForUpdate()
-                ->findOrFail($technicalAid->id);
+        $oldImagePath = $technicalAid->image_path;
+        $newImagePath = null;
 
-            if (isset($validated['total_units'])) {
-                $difference = $validated['total_units'] - $aid->total_units;
+        if ($request->hasFile('image')) {
+            $newImagePath = $request->file('image')
+                ->store('technical-aids', 'public');
 
-                $newAvailableUnits = $aid->available_units + $difference;
+            $validated['image_path'] = $newImagePath;
+        }
 
-                if ($newAvailableUnits < 0) {
+        try {
+            $updatedAid = DB::transaction(function () use (
+                $validated,
+                $technicalAid
+            ) {
+                $aid = TechnicalAid::query()
+                    ->lockForUpdate()
+                    ->findOrFail($technicalAid->id);
+
+                $newTotalUnits = $validated['total_units']
+                    ?? $aid->total_units;
+
+                $newMaintenanceUnits = $validated['maintenance_units']
+                    ?? $aid->maintenance_units;
+
+                $borrowedUnits = $aid->total_units
+                    - $aid->available_units
+                    - $aid->maintenance_units;
+
+                if ($newTotalUnits < ($borrowedUnits + $newMaintenanceUnits)) {
                     throw ValidationException::withMessages([
                         'total_units' => [
-                            'El nuevo total no puede ser inferior a las unidades actualmente prestadas.',
+                            'El total no puede ser inferior a las unidades prestadas más las unidades en mantenimiento.',
                         ],
                     ]);
                 }
 
-                $aid->total_units = $validated['total_units'];
+                $newAvailableUnits = $newTotalUnits
+                    - $borrowedUnits
+                    - $newMaintenanceUnits;
+
+                $aid->total_units = $newTotalUnits;
+                $aid->maintenance_units = $newMaintenanceUnits;
                 $aid->available_units = $newAvailableUnits;
+
+                foreach ([
+                    'category_id',
+                    'name',
+                    'reference',
+                    'description',
+                    'image_path',
+                ] as $field) {
+                    if (array_key_exists($field, $validated)) {
+                        $aid->{$field} = $validated[$field];
+                    }
+                }
+
+                $aid->save();
+
+                return $aid->load('category');
+            });
+        } catch (\Throwable $exception) {
+            if ($newImagePath !== null) {
+                Storage::disk('public')->delete($newImagePath);
             }
 
-            if (isset($validated['category_id'])) {
-                $aid->category_id = $validated['category_id'];
-            }
+            throw $exception;
+        }
 
-            if (isset($validated['reference'])) {
-                $aid->reference = $validated['reference'];
-            }
-
-            $aid->save();
-
-            return $aid->load('category');
-        });
+        if ($newImagePath !== null && $oldImagePath !== null) {
+            Storage::disk('public')->delete($oldImagePath);
+        }
 
         return response()->json([
             'message' => 'Ayuda técnica actualizada correctamente.',
@@ -264,7 +375,7 @@ class TechnicalAidController extends Controller
             return true;
         });
 
-        if (! $deactivated) {
+        if (!$deactivated) {
             return response()->json([
                 'message' => 'No se puede desactivar una ayuda técnica con préstamos pendientes.',
             ], 409);
